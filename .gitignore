@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.vercel/
+
+# Environment and secrets (Never commit!)
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Personal & local agent directories (Mandatory: never commit)
+.agents/
+.gemini/
+scratch/
+
+# Logs and system
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db

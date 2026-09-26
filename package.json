@@ -1,0 +1,35 @@
+{
+  "name": "keethankart-ecommerce",
+  "description": "KeethanKart — Next-Generation Indian E-Commerce & Real-Time Analytics Platform built with Next.js, Firebase Auth, Redux Toolkit, and Express.",
+  "version": "1.0.0",
+  "author": "Keethan R",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/keerthanrd17-dotcom/KeethanKart-.git"
+  },
+  "bugs": {
+    "url": "https://github.com/keerthanrd17-dotcom/KeethanKart-/issues"
+  },
+  "homepage": "https://keerthanrd17-dotcom.github.io/KeethanKart-/",
+  "keywords": [
+    "ecommerce",
+    "nextjs",
+    "react",
+    "firebase",
+    "redux-toolkit",
+    "typescript",
+    "realtime",
+    "broadcast-channel",
+    "indian-catalog",
+    "glassmorphism"
+  ],
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "husky": "^9.1.7"
+  },
+  "scripts": {
+    "prepare": "husky"
+  }
+}
