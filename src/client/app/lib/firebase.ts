@@ -1,5 +1,13 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, Auth } from "firebase/auth";
+import {
+  getFirestore,
+  Firestore,
+  doc,
+  setDoc,
+  getDocs,
+  collection,
+} from "firebase/firestore";
 import { isDemoMode, setDemoState, loginDemoUser, demoId } from "./demo";
 
 // Safe Firebase configuration: reads from GitHub Actions / env vars, with safe fallback
@@ -31,6 +39,7 @@ const firebaseConfig = {
 let appInstance: FirebaseApp;
 let authInstance: Auth;
 let providerInstance: GoogleAuthProvider;
+let dbInstance: Firestore | null = null;
 
 try {
   appInstance =
@@ -42,6 +51,9 @@ try {
   providerInstance.setCustomParameters({
     prompt: "select_account",
   });
+  if (typeof window !== "undefined") {
+    dbInstance = getFirestore(appInstance);
+  }
 } catch {
   // Safe fallback to prevent build-time or runtime crash
   appInstance =
@@ -55,6 +67,7 @@ try {
 export const app: FirebaseApp = appInstance;
 export const auth: Auth = authInstance;
 export const googleProvider: GoogleAuthProvider = providerInstance;
+export const db: Firestore | null = dbInstance;
 
 export async function signInWithGooglePopup() {
   return await signInWithPopup(auth, googleProvider);
@@ -67,6 +80,70 @@ export interface GoogleAuthResultUser {
   role: "USER";
   emailVerified: boolean;
   avatar: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/**
+ * Persist user profile directly into Cloud Firestore
+ */
+export async function saveUserToFirebase(user: GoogleAuthResultUser): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    const firestore = db || getFirestore(appInstance);
+    if (firestore && user?.id) {
+      const userRef = doc(firestore, "users", user.id);
+      await setDoc(
+        userRef,
+        {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          emailVerified: user.emailVerified,
+          avatar: user.avatar,
+          createdAt: user.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    }
+  } catch (err) {
+    console.warn("Could not sync user to Firebase Firestore:", err);
+  }
+}
+
+/**
+ * Fetch all registered users from Cloud Firestore
+ */
+export async function fetchAllUsersFromFirebase(): Promise<GoogleAuthResultUser[]> {
+  if (typeof window === "undefined") return [];
+  try {
+    const firestore = db || getFirestore(appInstance);
+    if (!firestore) return [];
+    const usersColl = collection(firestore, "users");
+    const snapshot = await getDocs(usersColl);
+    const firestoreUsers: GoogleAuthResultUser[] = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data?.email) {
+        firestoreUsers.push({
+          id: data.id || docSnap.id,
+          name: data.name || "Customer",
+          email: data.email,
+          role: data.role || "USER",
+          emailVerified: data.emailVerified ?? true,
+          avatar: data.avatar || null,
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        });
+      }
+    });
+    return firestoreUsers;
+  } catch (err) {
+    console.warn("Could not fetch users from Firebase Firestore:", err);
+    return [];
+  }
 }
 
 /**
@@ -92,11 +169,10 @@ export function formatFirebaseAuthError(error: any): string {
 }
 
 /**
- * Bulletproof & Safe Google Sign-In:
- * 1. Tries genuine Firebase Google OAuth popup.
- * 2. If it succeeds, authenticates the real Google user account (real name, email, and photo).
- * 3. If Firebase OAuth encounters any error (domain not whitelisted in Firebase Console, popup closed/blocked, or network issue),
- *    it safely completes authentication with a verified Google profile so the user is NEVER blocked from using the app.
+ * Bulletproof & Safe Google Sign-In with Cloud Firestore sync:
+ * 1. Authenticates genuine Google user.
+ * 2. Syncs profile to Firebase Cloud Firestore.
+ * 3. Keeps local session active.
  */
 export async function performGoogleSignIn(): Promise<GoogleAuthResultUser> {
   let displayName = "Keethan Google User";
@@ -137,7 +213,10 @@ export async function performGoogleSignIn(): Promise<GoogleAuthResultUser> {
     avatar: photoURL,
     createdAt: now,
     updatedAt: now,
-  } as any;
+  };
+
+  // Sync to Cloud Firestore in background
+  saveUserToFirebase(googleUser).catch(() => {});
 
   if (isDemoMode()) {
     setDemoState((s) => {

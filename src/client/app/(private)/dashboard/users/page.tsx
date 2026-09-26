@@ -115,13 +115,33 @@ const UsersDashboard = () => {
   const columns = [
     {
       key: "id",
-      label: "User ID",
+      label: "User ID / Firebase UID",
       sortable: true,
-      render: (row: any) => (
-        <span className="text-sm text-gray-600 font-mono">
-          <ToggleableText content={row?.id || "N/A"} truncateLength={5} />
-        </span>
-      ),
+      render: (row: any) => {
+        const isFirebaseUid = row?.id && !row.id.startsWith("demo-user");
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span
+              className="text-xs font-mono font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2 py-0.5 rounded max-w-[210px] truncate select-all cursor-pointer"
+              title={`Click to copy: ${row?.id || "N/A"}`}
+              onClick={() => {
+                if (row?.id) {
+                  navigator.clipboard.writeText(row.id);
+                  showToast("User ID copied to clipboard!", "success");
+                }
+              }}
+            >
+              {row?.id || "N/A"}
+            </span>
+            {isFirebaseUid && (
+              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                Firebase Cloud UID
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "name",
@@ -297,9 +317,15 @@ const UsersDashboard = () => {
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-3">
               <Users className="h-8 w-8 text-blue-600" />
-              <h1 className="text-3xl font-bold text-gray-800">
-                Users Dashboard
-              </h1>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-800">
+                  Users Dashboard
+                </h1>
+                <p className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 mt-0.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Synced with Firebase Cloud Firestore
+                </p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <button

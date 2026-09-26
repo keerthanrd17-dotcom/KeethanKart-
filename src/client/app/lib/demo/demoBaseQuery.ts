@@ -28,7 +28,7 @@ export const demoBaseQuery: BaseQueryFn<
 
   await new Promise((r) => setTimeout(r, 80));
 
-  const result = resolveDemoRequest({
+  const result = await resolveDemoRequest({
     url,
     method: normalized.method,
     body: normalized.body,

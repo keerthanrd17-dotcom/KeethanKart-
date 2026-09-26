@@ -9,6 +9,7 @@ import {
   setDemoState,
 } from "../index";
 import { broadcastActivity } from "../realtime";
+import { fetchAllUsersFromFirebase } from "../../firebase";
 import type { DemoCartItem, DemoOrder } from "../types";
 
 type DemoRequest = {
@@ -119,7 +120,7 @@ function handleAuth(
   return null;
 }
 
-function handleUsers(pathname: string, method: string, body?: Record<string, unknown>) {
+async function handleUsers(pathname: string, method: string, body?: Record<string, unknown>) {
   const state = getDemoState();
   const current = getCurrentDemoUser();
 
@@ -133,7 +134,29 @@ function handleUsers(pathname: string, method: string, body?: Record<string, unk
   }
 
   if (pathname === "/users" && method === "GET") {
-    return { data: ok({ users: state.users }) };
+    let combinedUsers = [...state.users];
+
+    try {
+      const firebaseUsers = await fetchAllUsersFromFirebase();
+      if (firebaseUsers && firebaseUsers.length > 0) {
+        const userMap = new Map();
+        // Add existing state users
+        combinedUsers.forEach((u) => userMap.set(u.email || u.id, u));
+        // Add/override with live Firestore users
+        firebaseUsers.forEach((fu) => userMap.set(fu.email || fu.id, fu));
+        combinedUsers = Array.from(userMap.values());
+
+        // Update local demo state
+        setDemoState((s) => ({
+          ...s,
+          users: combinedUsers as any,
+        }));
+      }
+    } catch (e) {
+      console.warn("Could not merge Firestore users:", e);
+    }
+
+    return { data: ok({ users: combinedUsers }) };
   }
 
   if (pathname === "/users/admins" && method === "GET") {
@@ -833,7 +856,7 @@ function handleReviews(pathname: string, method: string, body?: Record<string, u
   return null;
 }
 
-export function resolveDemoRequest(req: DemoRequest): { data?: unknown; error?: unknown } {
+export async function resolveDemoRequest(req: DemoRequest): Promise<{ data?: unknown; error?: unknown }> {
   const url =
     typeof req.url === "string"
       ? req.url
@@ -875,7 +898,7 @@ export function resolveDemoRequest(req: DemoRequest): { data?: unknown; error?: 
   }
 
   for (const run of handlers) {
-    const result = run();
+    const result = await run();
     if (result) return result;
   }
 
