@@ -1,4 +1,6 @@
 "use client";
+import React, { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { User, ExternalLink, ShieldCheck } from "lucide-react";
 import BreadCrumb from "@/app/components/feedback/BreadCrumb";
 import Sidebar from "../../components/layout/Sidebar";
@@ -13,6 +15,20 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+    try {
+      const isUnlocked = sessionStorage.getItem("keethan_admin_unlocked") === "true";
+      const isAdmin = user?.role === "ADMIN" || user?.role === "SUPERADMIN";
+      if (!isUnlocked || !isAdmin) {
+        router.replace("/admin");
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [isLoading, user, router]);
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row bg-[#060814] text-slate-100 selection:bg-amber-500/30 selection:text-amber-200">

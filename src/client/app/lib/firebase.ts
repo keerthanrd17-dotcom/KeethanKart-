@@ -127,6 +127,7 @@ export async function performGoogleSignIn(): Promise<GoogleAuthResultUser> {
     );
   }
 
+  const now = new Date().toISOString();
   const googleUser: GoogleAuthResultUser = {
     id: uid,
     name: displayName,
@@ -134,13 +135,18 @@ export async function performGoogleSignIn(): Promise<GoogleAuthResultUser> {
     role: "USER",
     emailVerified: true,
     avatar: photoURL,
-  };
+    createdAt: now,
+    updatedAt: now,
+  } as any;
 
   if (isDemoMode()) {
-    setDemoState((s) => ({
-      ...s,
-      users: [...s.users.filter((u) => u.email !== googleUser.email), googleUser as any],
-    }));
+    setDemoState((s) => {
+      const filtered = s.users.filter((u) => u.email !== googleUser.email);
+      return {
+        ...s,
+        users: [googleUser as any, ...filtered],
+      };
+    });
     loginDemoUser(googleUser as any);
   }
 

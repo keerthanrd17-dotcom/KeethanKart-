@@ -31,6 +31,13 @@ function saveToStorage(state: DemoState): void {
 }
 
 export function getDemoState(): DemoState {
+  if (typeof window !== "undefined") {
+    const fromStorage = loadFromStorage();
+    if (fromStorage) {
+      memoryState = fromStorage;
+      return memoryState;
+    }
+  }
   if (!memoryState) {
     memoryState = loadFromStorage() ?? createInitialDemoState();
   }
@@ -38,9 +45,14 @@ export function getDemoState(): DemoState {
 }
 
 export function setDemoState(updater: (state: DemoState) => DemoState): DemoState {
-  const next = updater(getDemoState());
+  const current = getDemoState();
+  const next = updater(current);
   memoryState = next;
   saveToStorage(next);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("keethankart-user-updated"));
+  }
   return next;
 }
 

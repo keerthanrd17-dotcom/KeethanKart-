@@ -18,6 +18,7 @@ import {
   UserPlus,
   Crown,
   Shield,
+  RefreshCw,
 } from "lucide-react";
 import useToast from "@/app/hooks/ui/useToast";
 import { useForm } from "react-hook-form";
@@ -37,9 +38,24 @@ const UsersDashboard = () => {
 
   const shouldFetchUsers = pathname === "/dashboard/users";
 
-  const { data, isLoading, error } = useGetAllUsersQuery(undefined, {
+  const { data, isLoading, error, refetch } = useGetAllUsersQuery(undefined, {
     skip: !shouldFetchUsers,
+    refetchOnMountOrArgChange: true,
   });
+
+  React.useEffect(() => {
+    const handleUpdate = () => {
+      refetch();
+    };
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("keethankart-user-updated", handleUpdate);
+    window.addEventListener("focus", handleUpdate);
+    return () => {
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("keethankart-user-updated", handleUpdate);
+      window.removeEventListener("focus", handleUpdate);
+    };
+  }, [refetch]);
 
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
@@ -286,6 +302,19 @@ const UsersDashboard = () => {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => {
+                  refetch();
+                  showToast("User list refreshed", "success");
+                }}
+                disabled={isLoading}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg transition-colors shadow-sm"
+                title="Refresh user list"
+              >
+                <RefreshCw size={13} className={isLoading ? "animate-spin text-blue-600" : "text-gray-600"} />
+                <span>Refresh</span>
+              </button>
+
               <div className="text-sm text-gray-500">
                 {users.length} {users.length === 1 ? "user" : "users"} found
               </div>
